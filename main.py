@@ -10,13 +10,27 @@ from config import TOKEN
 
 # ==================== تنظیمات ====================
 
-BOT_USERNAME = "SohrabUploaderabot"          # یوزرنیم بات بدون @ (برای ساخت لینک)
+bot_username: str = ""          # یوزرنیم بات بدون @ (برای ساخت لینک)
 # ===================================================
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+@dp.startup()
+async def on_startup() -> None:
+    global bot_username
+
+    me = await bot.get_me()
+
+    if not me.username:
+        raise RuntimeError(
+            "This bot has no @username. Set one via @BotFather."
+        )
+
+    bot_username = me.username
+    logging.info("Resolved bot username: @%s", bot_username)
 
 # دیکشنری نگهداری محتوا در حافظه:
 #   کلید   -> کد رندومی که در انتهای لینک قرار می‌گیرد
@@ -76,7 +90,7 @@ async def handle_incoming_content(message: Message) -> None:
     code = generate_unique_code()
     content_store[code] = (message.chat.id, message.message_id)
 
-    link = f"https://t.me/{BOT_USERNAME}?start={code}"
+    link = f"https://t.me/{bot_username}?start={code}"
     await message.answer(f"لینک اختصاصی محتوات آماده شد:\n{link}")
 
 
