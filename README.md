@@ -8,7 +8,7 @@ Instead of forwarding messages manually, users can send any type of content to t
 
 ## Overview
 
-Persona Uploader Bot accepts virtually any Telegram content, including:
+Uploader Bot accepts virtually any Telegram content, including:
 
 * Text messages
 * Photos
@@ -56,7 +56,7 @@ git clone https://github.com/1Sohrab1/persona_uploader-bot.git
 Move into the project directory:
 
 ```bash
-cd persona_uploader-bot
+cd uploader_bot
 ```
 
 Create a virtual environment:
@@ -85,11 +85,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-> **Note**
->
-> `requirements.txt` is introduced in **Issue #1**:
->
-> **chore: add requirements.txt with pinned project dependencies**
+
 
 ---
 
@@ -202,26 +198,6 @@ The bot must still have access to the original message when it is copied.
 
 If the source message becomes unavailable (for example, deleted or inaccessible), the bot may fail to deliver it.
 
----
-
-### Hardcoded bot username
-
-Currently, the bot username is hardcoded in `main.py` when generating deep links.
-
-This will be improved in:
-
-**Issue #3**
-
-**refactor: resolve bot username dynamically via `bot.get_me()` on startup**
-
-Once that change is merged, this README should be updated accordingly.
-
----
-
-# Related Issues
-
-* **#1** — Add `requirements.txt` with pinned project dependencies.
-* **#3** — Resolve bot username dynamically using `bot.get_me()` on startup.
 
 ---
 
