@@ -6,11 +6,13 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message
 from aiogram.exceptions import TelegramBadRequest
-from config import TOKEN
+
+from config import TOKEN, VIDEO_DELETE_DELAY_SECONDS
 
 # ==================== تنظیمات ====================
 
-bot_username: str = ""          # یوزرنیم بات بدون @ (برای ساخت لینک)
+bot_username: str = ""  # یوزرنیم بات بدون @
+
 # ===================================================
 
 logging.basicConfig(level=logging.INFO)
@@ -32,48 +34,78 @@ async def on_startup() -> None:
     bot_username = me.username
     logging.info("Resolved bot username: @%s", bot_username)
 
-# دیکشنری نگهداری محتوا در حافظه:
-#   کلید   -> کد رندومی که در انتهای لینک قرار می‌گیرد
-#   مقدار  -> (chat_id پیام اصلی, message_id پیام اصلی)
-content_store: dict[str, tuple[int, int]] = {}
+
+# key -> code
+# value -> (chat_id, message_id, is_video)
+content_store: dict[str, tuple[int, int, bool]] = {}
 
 
 def generate_unique_code() -> str:
     """یک کد رندوم تولید می‌کند که در content_store تکراری نباشد."""
     while True:
-        code = str(random.randint(10**8, 10**9 - 1))  # عدد ۹ رقمی
+        code = str(random.randint(10**8, 10**9 - 1))
         if code not in content_store:
             return code
 
 
+async def delete_after_delay(message: Message, delay: int) -> None:
+    """پس از delay ثانیه پیام را حذف می‌کند."""
+    await asyncio.sleep(delay)
+
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        logging.debug(
+            "Message %s already deleted or cannot be deleted.",
+            message.message_id,
+        )
+
+
 @dp.message(CommandStart(deep_link=True))
-async def handle_deep_link(message: Message, command: CommandObject) -> None:
+async def handle_deep_link(
+    message: Message,
+    command: CommandObject,
+) -> None:
     """
-    وقتی کاربر روی لینک t.me/<bot>?start=<code> کلیک می‌کند،
-    همین هندلر با /start <code> صدا زده می‌شود.
+    وقتی کاربر روی لینک
+    t.me/<bot>?start=<code>
+    کلیک می‌کند.
     """
     code = command.args
     stored = content_store.get(code)
 
     if stored is None:
-        await message.answer("این لینک نامعتبره یا محتواش دیگه در دسترس نیست.")
+        await message.answer(
+            "این لینک نامعتبره یا محتواش دیگه در دسترس نیست."
+        )
         return
 
-    source_chat_id, source_message_id = stored
+    source_chat_id, source_message_id, is_video = stored
+
     try:
-        await bot.copy_message(
+        sent_message = await bot.copy_message(
             chat_id=message.chat.id,
             from_chat_id=source_chat_id,
             message_id=source_message_id,
         )
+
+        if is_video:
+            asyncio.create_task(
+                delete_after_delay(
+                    sent_message,
+                    VIDEO_DELETE_DELAY_SECONDS,
+                )
+            )
+
     except TelegramBadRequest:
-        # مثلاً پیام اصلی حذف شده یا بات دیگه به اون چت دسترسی نداره
-        await message.answer("متأسفانه محتوای اصلی دیگه در دسترس نیست.")
+        await message.answer(
+            "متأسفانه محتوای اصلی دیگه در دسترس نیست."
+        )
 
 
 @dp.message(CommandStart())
 async def handle_plain_start(message: Message) -> None:
-    """پاسخ به /start ساده (بدون کد)."""
+    """پاسخ به /start ساده."""
     await message.answer(
         "سلام! هر چیزی برام بفرستی (متن، عکس، ویدیو، فایل و ...)، "
         "یه لینک اختصاصی بهت می‌دم که با فرستادنش برای هرکسی، "
@@ -84,14 +116,21 @@ async def handle_plain_start(message: Message) -> None:
 @dp.message()
 async def handle_incoming_content(message: Message) -> None:
     """
-    هندلر عمومی: چون بعد از هندلرهای بالا ثبت شده،
-    فقط پیام‌هایی که /start نیستن به اینجا می‌رسن (متن، عکس، ویدیو، ویس، فایل، استیکر و ...).
+    ذخیره محتوا و ساخت لینک اختصاصی.
     """
     code = generate_unique_code()
-    content_store[code] = (message.chat.id, message.message_id)
+
+    content_store[code] = (
+        message.chat.id,
+        message.message_id,
+        message.video is not None,
+    )
 
     link = f"https://t.me/{bot_username}?start={code}"
-    await message.answer(f"لینک اختصاصی محتوات آماده شد:\n{link}")
+
+    await message.answer(
+        f"لینک اختصاصی محتوات آماده شد:\n{link}"
+    )
 
 
 async def main() -> None:
