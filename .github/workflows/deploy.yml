@@ -25,4 +25,4 @@ jobs:
             cd "${{ secrets.DEPLOY_DIR }}"
             git fetch origin main
             git reset --hard origin/main
-            bash scripts/deploy.sh
+            bash .github/scripts/deploy.sh
