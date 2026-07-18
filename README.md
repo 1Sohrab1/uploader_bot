@@ -101,6 +101,16 @@ Example:
 
 ```env
 TOKEN=123456789:ABC-DEF1234567890abcdefghijklmnop
+
+VIDEO_DELETE_DELAY_SECONDS
+
+Number of seconds a copied video remains in the recipient's chat
+before being automatically deleted.
+
+Default: 60
+
+Example:
+VIDEO_DELETE_DELAY_SECONDS=60
 ```
 
 The bot reads the token from `.env` through `config.py`.
@@ -183,47 +193,6 @@ persona_uploader-bot/
 
 The current implementation has a few important limitations.
 
-### In-memory storage
-
-Uploaded content is stored in an in-memory dictionary (`content_store` in `main.py`).
-
-As a result:
-
-* All stored messages are lost when the bot restarts.
-* Previously generated links become invalid after a restart.
-
-For persistent storage, consider using a database such as SQLite, PostgreSQL, or Redis.
-
----
-
-### Source message availability
-
-The bot must still have access to the original message when it is copied.
-
-If the source message becomes unavailable (for example, deleted or inaccessible), the bot may fail to deliver it.
-
----
-
-### Hardcoded bot username
-
-Currently, the bot username is hardcoded in `main.py` when generating deep links.
-
-This will be improved in:
-
-**Issue #3**
-
-**refactor: resolve bot username dynamically via `bot.get_me()` on startup**
-
-Once that change is merged, this README should be updated accordingly.
-
----
-
-# Related Issues
-
-* **#1** — Add `requirements.txt` with pinned project dependencies.
-* **#3** — Resolve bot username dynamically using `bot.get_me()` on startup.
-
----
 
 # Future Improvements
 

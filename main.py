@@ -6,6 +6,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message
 from aiogram.exceptions import TelegramBadRequest
+from database import (
+    init_db,
+    save_link,
+    get_link,
+    code_exists,
+)
 
 from config import TOKEN, VIDEO_DELETE_DELAY_SECONDS
 
@@ -33,18 +39,14 @@ async def on_startup() -> None:
 
     bot_username = me.username
     logging.info("Resolved bot username: @%s", bot_username)
-
-
-# key -> code
-# value -> (chat_id, message_id, is_video)
-content_store: dict[str, tuple[int, int, bool]] = {}
+    init_db()
 
 
 def generate_unique_code() -> str:
     """یک کد رندوم تولید می‌کند که در content_store تکراری نباشد."""
     while True:
         code = str(random.randint(10**8, 10**9 - 1))
-        if code not in content_store:
+        if not code_exists(code):
             return code
 
 
@@ -72,7 +74,7 @@ async def handle_deep_link(
     کلیک می‌کند.
     """
     code = command.args
-    stored = content_store.get(code)
+    stored = get_link(code)
 
     if stored is None:
         await message.answer(
@@ -80,7 +82,9 @@ async def handle_deep_link(
         )
         return
 
-    source_chat_id, source_message_id, is_video = stored
+    source_chat_id = stored.chat_id
+    source_message_id = stored.message_id
+    is_video = stored.is_video
 
     try:
         sent_message = await bot.copy_message(
@@ -120,10 +124,11 @@ async def handle_incoming_content(message: Message) -> None:
     """
     code = generate_unique_code()
 
-    content_store[code] = (
-        message.chat.id,
-        message.message_id,
-        message.video is not None,
+    save_link(
+        code=code,
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        is_video=message.video is not None,
     )
 
     link = f"https://t.me/{bot_username}?start={code}"
