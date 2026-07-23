@@ -213,3 +213,60 @@ Possible future enhancements include:
 This project is available under the MIT License unless stated otherwise.
 
 
+## Docker
+
+You can run the bot inside a Docker container instead of a local Python environment.
+
+### Build
+
+Build the Docker image:
+
+```bash
+docker build -t uploader-bot .
+```
+
+### Run
+
+Run the container using your existing `.env` file:
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/logs:/app/logs" \
+  --name uploader-bot \
+  uploader-bot
+```
+
+### Environment Variables
+
+The bot reads its configuration from environment variables.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TOKEN` | ✅ Yes | - | Telegram Bot Token |
+| `VIDEO_DELETE_DELAY_SECONDS` | No | `60` | Delay before deleting copied video messages |
+
+> Do **not** bake your `.env` file into the Docker image. Pass it at runtime using `--env-file`.
+
+### Data Persistence
+
+SQLite data is stored in `/app/data`.
+
+Mount a host directory to keep the database between container recreations:
+
+```bash
+-v "$(pwd)/data:/app/data"
+```
+
+Without this volume, recreating the container will also recreate the SQLite database and previously generated links will be lost.
+
+### Logs
+
+To access logs from the host machine, mount the logs directory:
+
+```bash
+-v "$(pwd)/logs:/app/logs"
+```
+
+This keeps log files outside the container.
